@@ -18,7 +18,6 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Hello, World!")
         self.setWindowOpacity(0.5)
         self.setWindowFlag(Qt.FramelessWindowHint)
-        print(funcs.get_taskbar_height())
         self.size = (200, 100)
         self.setGeometry(50, funcs.get_screen_size()[1] - funcs.get_taskbar_height() - self.size[1], self.size[0],
                          self.size[1])
@@ -30,9 +29,10 @@ class MainWindow(QMainWindow):
 
             def event(self, e: QtCore.QEvent) -> bool:
                 if isinstance(e, QtGui.QMouseEvent):
-                    print(e.type())
                     if e.button() == Qt.MiddleButton and e.type() == Qt.MouseButtonPress:
+                        self.window().destroy()
                         self.window().app.quit()
+                        return False
                 return super().event(e)
 
         button = ExampleButton("Middleclick to exit")
