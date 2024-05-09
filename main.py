@@ -24,7 +24,6 @@ class MainWindow(QMainWindow):
                 if isinstance(e, QtGui.QMouseEvent):
                     print(e.type())
                     if e.button() == Qt.MiddleButton and e.type() == Qt.MouseButtonPress:
-                        self.window().destroy()
                         self.window().app.quit()
                 return super().event(e)
 
