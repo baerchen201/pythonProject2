@@ -1,9 +1,12 @@
+import os
 import sys
 
 from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton
+
+if os.name == "nt": import windows_funcs as funcs
 
 
 # Subclass QMainWindow to customize your application's main window
@@ -15,6 +18,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Hello, World!")
         self.setWindowOpacity(0.5)
         self.setWindowFlag(Qt.FramelessWindowHint)
+        print(funcs.get_taskbar_height())
+        self.size = (200, 100)
+        self.setGeometry(50, funcs.get_screen_size()[1] - funcs.get_taskbar_height() - self.size[1], self.size[0],
+                         self.size[1])
+        self.setWindowFlag(Qt.WindowStaysOnTopHint)
 
         class ExampleButton(QPushButton):
             def window(self) -> MainWindow:
