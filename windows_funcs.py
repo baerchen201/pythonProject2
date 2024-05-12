@@ -31,7 +31,8 @@ def show_cursor() -> None:
     user32.ShowCursor(True)
 
 
-def toggle_cursor(on: bool) -> None: return show_cursor() if on else hide_cursor()  # this my code tho. pretty compact:}
+def toggle_cursor(on: bool) -> None:
+    return show_cursor() if on else hide_cursor()  # this my code tho. pretty compact:}
 
 
 def get_taskbar_height():
@@ -39,21 +40,40 @@ def get_taskbar_height():
     SPI_GETWORKAREA = 48
 
     class RECT(ctypes.Structure):
-        _fields_ = [("left", ctypes.c_long),
-                    ("top", ctypes.c_long),
-                    ("right", ctypes.c_long),
-                    ("bottom", ctypes.c_long)]
+        _fields_ = [
+            ("left", ctypes.c_long),
+            ("top", ctypes.c_long),
+            ("right", ctypes.c_long),
+            ("bottom", ctypes.c_long),
+        ]
 
     # Get the work area (excluding taskbar) of the primary monitor
     work_area = RECT()
-    ctypes.windll.user32.SystemParametersInfoW(
-        SPI_GETWORKAREA, 0, ctypes.byref(work_area), 0)
+    ctypes.windll.user32.SystemParametersInfoW(SPI_GETWORKAREA, 0, ctypes.byref(work_area), 0)
 
     # Calculate the taskbar height
-    taskbar_height = ctypes.windll.user32.GetSystemMetrics(1) - \
-                     (work_area.bottom - work_area.top)
+    taskbar_height = ctypes.windll.user32.GetSystemMetrics(1) - (work_area.bottom - work_area.top)
 
     return taskbar_height
+
+
+def get_taskbar_position():
+    # Define necessary constants and structures
+    SPI_GETWORKAREA = 48
+
+    class RECT(ctypes.Structure):
+        _fields_ = [
+            ("left", ctypes.c_long),
+            ("top", ctypes.c_long),
+            ("right", ctypes.c_long),
+            ("bottom", ctypes.c_long),
+        ]
+
+    # Get the work area (excluding taskbar) of the primary monitor
+    work_area = RECT()
+    ctypes.windll.user32.SystemParametersInfoW(SPI_GETWORKAREA, 0, ctypes.byref(work_area), 0)
+
+    return work_area.bottom - work_area.top
 
 
 def kill_processes_by_name(process_name: str) -> int:
