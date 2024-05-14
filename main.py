@@ -7,6 +7,8 @@ from typing import Callable, Literal
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QEvent
 from PyQt5.QtGui import QMouseEvent, QPixmap
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
 
 if os.name == "nt":
@@ -85,6 +87,28 @@ class ClickableLabel(QLabel):
         return self._hooks.pop(hook_id)
 
 
+class ClickableVideoWidget(QVideoWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._hooks: dict[int, Callable[[SimpleMouseEvent], bool]] = {}
+
+    def event(self, e: QEvent) -> bool:
+        if isinstance(e, QMouseEvent):
+            for func in self._hooks.values():
+                if not func(SimpleMouseEvent.from_event(e)):
+                    return False
+        return super().event(e)
+
+    def hook_click(self, func: Callable[[SimpleMouseEvent], bool]) -> int:
+        for i in range(len(self._hooks) + 1):
+            if i not in self._hooks:
+                self._hooks[i] = func
+                return i
+
+    def unhook_click(self, hook_id: int) -> Callable[[SimpleMouseEvent], bool]:
+        return self._hooks.pop(hook_id)
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -99,15 +123,33 @@ class MainWindow(QMainWindow):
         def _(e: SimpleMouseEvent) -> bool:
             print(e)
             if e.button == SimpleMouseEvent.BTN_LEFT and e.action == SimpleMouseEvent.ACT_DOWN:
+                _switch()
+                return True
+            if e.button == SimpleMouseEvent.BTN_RIGHT:
                 QApplication.quit()
                 return False
 
         pixmap = QPixmap("img.png")
         label.setPixmap(pixmap)
-        label.setToolTip("Click to quit")
+        label.setToolTip("Leftclick to switch, Rightclick to quit")
         self.size = (100, 100)
         self.size = (pixmap.width(), pixmap.height())
         self.setGeometry(QtCore.QRect(50, funcs.get_taskbar_position() - self.size[1], self.size[0], self.size[1]))
+
+        vwidget = ClickableVideoWidget(self)
+        media_player = QMediaPlayer(self)
+        media_player.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile("anim.mp4")))
+        media_player.setVideoOutput(vwidget)
+        vwidget.hook_click(_)
+        vwidget.setToolTip(label.toolTip())
+
+        next_widget = vwidget
+
+        def _switch():
+            nonlocal next_widget
+            _ = next_widget
+            next_widget = self.centralWidget()
+            self.setCentralWidget(_)
 
         self.setCentralWidget(label)
         self.show()
