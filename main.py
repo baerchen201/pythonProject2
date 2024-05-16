@@ -202,7 +202,7 @@ class MainWindow(QMainWindow):
                 super().next_frame(*args, **kwargs)
                 w: MainWindow = self.window()
                 _ = w.geometry()
-                _.setX(700 + [1, 2, 3, 2][self.current_frame] * self.dist)
+                _.setX(700 + [3, 2, 1, 2][self.current_frame] * self.dist)
                 w.setGeometry(QRect(_.x(), _.y(), *w.size))
 
         label = _(self, frames=["a1.png", "a2.png", "a3.png", "a2.png"], size=self.size)
@@ -214,11 +214,11 @@ class MainWindow(QMainWindow):
                 SimpleMouseEvent.ACT_DOUBLECLICK,
             ]:
                 if e.button == SimpleMouseEvent.BTN_LEFT:
-                    label.autoplay = random.randint(0, 15)
+                    label.autoplay = random.randint(0, 10)
                     print("Fps: ", label.autoplay)
                     return True
                 elif e.button == SimpleMouseEvent.BTN_MIDDLE:
-                    label.dist = random.randint(20, 50)
+                    label.dist = random.randint(5, 30)
                     print("Dist: ", label.dist)
                     return True
 
