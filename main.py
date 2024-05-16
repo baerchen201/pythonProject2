@@ -4,30 +4,58 @@ import os
 import sys
 from typing import Callable, Literal
 
-from PyQt6.QtCore import Qt, QEvent, QRect
-from PyQt6.QtGui import QMouseEvent, QPixmap
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel
+try:
+    from PyQt6.QtCore import Qt, QEvent, QRect
+    from PyQt6.QtGui import QMouseEvent, QPixmap, QIcon
+    from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QMessageBox
+except ModuleNotFoundError as e:
+    try:
+        from tkinter import messagebox
+
+        messagebox.showerror("Python module missing",
+                             f"To run this program, you need to install the following python module: {e.name}\n\nYou can install it with the following command:\n\n\tpip install {e.name}")
+        raise SystemExit(1)
+    except ModuleNotFoundError:
+        print(e)
+        print(f"Please install the required module with the following command:\n\tpip3 install {e.name}")
+    except Exception as _e:
+        print(e)
+        print(_e)
+    finally:
+        raise SystemExit(1)
 
 if os.name == "nt":
     import windows_funcs as funcs
 else:
-    raise SystemError("This program currently only runs on windows")
+    app = QApplication([])
+    msgbox = QMessageBox()
+    msgbox.setIcon(QMessageBox.Icon.Critical)
+    msgbox.setText("This program currently only runs on windows")
+    msgbox.setInformativeText(f"Due to system limitations, this program cannot be run on your system [{os.name}].")
+    msgbox.setStandardButtons(QMessageBox.StandardButton.Ok)
+    msgbox.setDefaultButton(QMessageBox.StandardButton.Ok)
+    msgbox.setWindowTitle("System Error")
+    msgbox.setWindowIcon(QIcon("default_icon.png"))
+    msgbox.exec()
+    app.quit()
+    raise SystemExit(1)
 
 
 class SimpleMouseEvent:
-    ACT_DOWN = 0
-    ACT_UP = 1
+    ACT_DOWN = QEvent.Type.MouseButtonPress
+    ACT_UP = QEvent.Type.MouseButtonRelease
 
-    BTN_LEFT = 0
-    BTN_RIGHT = 1
-    BTN_MIDDLE = 2
+    BTN_LEFT = Qt.MouseButton.LeftButton
+    BTN_RIGHT = Qt.MouseButton.RightButton
+    BTN_MIDDLE = Qt.MouseButton.MiddleButton
 
     def __init__(
-        self,
-        btn: Literal[0, 1, 2, None] | int,
-        action: Literal[0, 1, None] | int,
-        a_pos: tuple[int, int] | tuple,
-        r_pos: tuple[int, int] | tuple,
+            self,
+            btn: Literal[
+                     Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton, Qt.MouseButton.MiddleButton, None] | int,
+            action: Literal[QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonRelease, None] | int,
+            a_pos: tuple[int, int] | tuple,
+            r_pos: tuple[int, int] | tuple,
     ):
         self.button = btn
         self.action = action
@@ -39,11 +67,11 @@ class SimpleMouseEvent:
 
     @property
     def str_button(self) -> str:
-        return {0: "left", 1: "right", 2: "middle", None: ""}[self.button]
+        return {self.BTN_LEFT: "left", self.BTN_RIGHT: "right", self.BTN_MIDDLE: "middle", None: ""}[self.button]
 
     @property
     def str_action(self) -> str:
-        return {0: "down", 1: "up", None: ""}[self.action]
+        return {self.ACT_DOWN: "down", self.ACT_UP: "up", None: ""}[self.action]
 
     @property
     def str_absolute_pos(self) -> str:
@@ -55,10 +83,12 @@ class SimpleMouseEvent:
 
     def from_event(event: QMouseEvent) -> SimpleMouseEvent:
         return SimpleMouseEvent(
-            btn={Qt.MouseButton.LeftButton: 0, Qt.MouseButton.RightButton: 1, Qt.MouseButton.MiddleButton: 2}.get(
-                event.button(), None
-            ),
-            action={QEvent.Type.MouseButtonPress: 0, QEvent.Type.MouseButtonRelease: 1}.get(event.type(), None),
+            btn=event.button()
+            if event.button() in [Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton, Qt.MouseButton.MiddleButton]
+            else None,
+            action=event.type()
+            if event.type() in [QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonRelease]
+            else None,
             a_pos=(event.globalPosition().x(), event.globalPosition().y()),
             r_pos=(event.position().x(), event.position().y()),
         )
@@ -93,16 +123,19 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Hello, World!")
+        self.setWindowIcon(QIcon("default_icon.png"))
         self.setWindowOpacity(0.5)
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
+        self.setWindowFlag(Qt.WindowType.Tool)  # This prevents the window from appearing in the taskbar and Alt+Tab
+        self.setWindowFlag(Qt.WindowType.WindowDoesNotAcceptFocus, True)  # This prevents the window from taking focus
 
         label = ClickableLabel(self)
 
         @label.hook_click
         def _(e: SimpleMouseEvent) -> bool:
             print(e)
-            if e.button == SimpleMouseEvent.BTN_RIGHT:
+            if e.button == SimpleMouseEvent.BTN_RIGHT and e.action == SimpleMouseEvent.ACT_UP:
                 QApplication.quit()
                 return False
 
