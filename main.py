@@ -4,10 +4,9 @@ import os
 import sys
 from typing import Callable, Literal
 
-from PyQt5 import QtCore
-from PyQt5.QtCore import Qt, QEvent
-from PyQt5.QtGui import QMouseEvent, QPixmap
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
+from PyQt6.QtCore import Qt, QEvent, QRect
+from PyQt6.QtGui import QMouseEvent, QPixmap
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel
 
 if os.name == "nt":
     import windows_funcs as funcs
@@ -56,10 +55,12 @@ class SimpleMouseEvent:
 
     def from_event(event: QMouseEvent) -> SimpleMouseEvent:
         return SimpleMouseEvent(
-            btn={Qt.LeftButton: 0, Qt.RightButton: 1, Qt.MiddleButton: 2}.get(event.button(), None),
-            action={QEvent.MouseButtonPress: 0, QEvent.MouseButtonRelease: 1}.get(event.type(), None),
-            a_pos=(event.globalX(), event.globalY()),
-            r_pos=(event.x(), event.y()),
+            btn={Qt.MouseButton.LeftButton: 0, Qt.MouseButton.RightButton: 1, Qt.MouseButton.MiddleButton: 2}.get(
+                event.button(), None
+            ),
+            action={QEvent.Type.MouseButtonPress: 0, QEvent.Type.MouseButtonRelease: 1}.get(event.type(), None),
+            a_pos=(event.globalPosition().x(), event.globalPosition().y()),
+            r_pos=(event.position().x(), event.position().y()),
         )
 
 
@@ -93,8 +94,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Hello, World!")
         self.setWindowOpacity(0.5)
-        self.setWindowFlag(Qt.FramelessWindowHint)
-        self.setWindowFlag(Qt.WindowStaysOnTopHint)
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
 
         label = ClickableLabel(self)
 
@@ -110,7 +111,7 @@ class MainWindow(QMainWindow):
         label.setToolTip("Right click to quit")
         self.size = (100, 100)
         self.size = (pixmap.width(), pixmap.height())
-        self.setGeometry(QtCore.QRect(50, funcs.get_taskbar_position() - self.size[1], self.size[0], self.size[1]))
+        self.setGeometry(QRect(50, funcs.get_taskbar_position() - self.size[1], self.size[0], self.size[1]))
 
         self.setCentralWidget(label)
         self.show()
