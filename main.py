@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
+import time
 from typing import Callable, Literal
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QEvent
-from PyQt5.QtGui import QMouseEvent, QPixmap
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from PyQt5.QtGui import QMouseEvent, QImage
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
 
@@ -109,6 +110,35 @@ class ClickableVideoWidget(QVideoWidget):
         return self._hooks.pop(hook_id)
 
 
+class AnimatedPixmap(QImage):
+    def __init__(self, _frames: list[str | bytes | os.PathLike], _fps: float | None = None):
+        super().__init__()
+        self.fps = _fps
+        self.current_frame = 0
+        self.frames = []
+        if len(_frames) == 0:
+            raise ValueError(f"No animation frames")
+        for frame in _frames:
+            if isinstance(frame, str):
+                with open(frame, "rb") as f:
+                    frame = f.read()
+            self.frames.append(frame)
+
+    def _next_frame(self):
+        time.sleep(1 / self.fps)
+        self.next_frame()
+        threading.Thread(target=self._next_frame).start()
+
+    def next_frame(self, skip: int | None = 0):
+        self.current_frame = (self.current_frame + skip + 1) % len(self.frames)
+        print(self.current_frame, self.frames[self.current_frame])
+        self.loadFromData(self.frames[self.current_frame])
+
+    def resize_all(self, x: int, y: int):
+        for frame in self.frames:
+            pass
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -129,29 +159,27 @@ class MainWindow(QMainWindow):
                 QApplication.quit()
                 return False
 
-        pixmap = QPixmap("img.png")
-        label.setPixmap(pixmap)
+        image = QImage("img.png")
         label.setToolTip("Leftclick to switch, Rightclick to quit")
         self.size = (100, 100)
-        self.size = (pixmap.width(), pixmap.height())
+        self.size = (image.width(), image.height())
         self.setGeometry(QtCore.QRect(50, funcs.get_taskbar_position() - self.size[1], self.size[0], self.size[1]))
 
-        vwidget = ClickableVideoWidget(self)
-        media_player = QMediaPlayer(self)
-        media_player.setMedia(QMediaContent(QtCore.QUrl.fromLocalFile("anim.mp4")))
-        media_player.setVideoOutput(vwidget)
-        vwidget.hook_click(_)
-        vwidget.setToolTip(label.toolTip())
+        apixmap = AnimatedPixmap(["a1.png", "a2.png", "a3.png", "a2.png"])
 
-        next_widget = vwidget
+        next_pixmap = apixmap
 
         def _switch():
-            nonlocal next_widget
-            _ = next_widget
-            next_widget = self.centralWidget()
-            self.setCentralWidget(_)
+            apixmap.next_frame()
+            return
+            nonlocal next_pixmap
+            _ = next_pixmap
+            next_pixmap = label.pixmap()
+            label.setPixmap(_)
 
-        self.setCentralWidget(label)
+        widget = QImageWidget
+
+        self.setCentralWidget(image)
         self.show()
 
 
