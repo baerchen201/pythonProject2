@@ -2,14 +2,11 @@ from __future__ import annotations
 
 import os
 import sys
-import threading
-import time
 from typing import Callable, Literal
 
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QEvent
-from PyQt5.QtGui import QMouseEvent, QImage
-from PyQt5.QtMultimediaWidgets import QVideoWidget
+from PyQt5.QtGui import QMouseEvent, QPixmap
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
 
 if os.name == "nt":
@@ -69,74 +66,26 @@ class SimpleMouseEvent:
 class ClickableLabel(QLabel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._hooks: dict[int, Callable[[SimpleMouseEvent], bool]] = {}
+        self._hooks: dict[int, Callable[[SimpleMouseEvent], bool | None]] = {}
 
     def event(self, e: QEvent) -> bool:
         if isinstance(e, QMouseEvent):
             for func in self._hooks.values():
-                if not func(SimpleMouseEvent.from_event(e)):
+                ret = func(SimpleMouseEvent.from_event(e))
+                if ret is None:
+                    continue
+                if not ret:
                     return False
         return super().event(e)
 
-    def hook_click(self, func: Callable[[SimpleMouseEvent], bool]) -> int:
+    def hook_click(self, func: Callable[[SimpleMouseEvent], bool | None]) -> int:
         for i in range(len(self._hooks) + 1):
             if i not in self._hooks:
                 self._hooks[i] = func
                 return i
 
-    def unhook_click(self, hook_id: int) -> Callable[[SimpleMouseEvent], bool]:
+    def unhook_click(self, hook_id: int) -> Callable[[SimpleMouseEvent], bool | None]:
         return self._hooks.pop(hook_id)
-
-
-class ClickableVideoWidget(QVideoWidget):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._hooks: dict[int, Callable[[SimpleMouseEvent], bool]] = {}
-
-    def event(self, e: QEvent) -> bool:
-        if isinstance(e, QMouseEvent):
-            for func in self._hooks.values():
-                if not func(SimpleMouseEvent.from_event(e)):
-                    return False
-        return super().event(e)
-
-    def hook_click(self, func: Callable[[SimpleMouseEvent], bool]) -> int:
-        for i in range(len(self._hooks) + 1):
-            if i not in self._hooks:
-                self._hooks[i] = func
-                return i
-
-    def unhook_click(self, hook_id: int) -> Callable[[SimpleMouseEvent], bool]:
-        return self._hooks.pop(hook_id)
-
-
-class AnimatedPixmap(QImage):
-    def __init__(self, _frames: list[str | bytes | os.PathLike], _fps: float | None = None):
-        super().__init__()
-        self.fps = _fps
-        self.current_frame = 0
-        self.frames = []
-        if len(_frames) == 0:
-            raise ValueError(f"No animation frames")
-        for frame in _frames:
-            if isinstance(frame, str):
-                with open(frame, "rb") as f:
-                    frame = f.read()
-            self.frames.append(frame)
-
-    def _next_frame(self):
-        time.sleep(1 / self.fps)
-        self.next_frame()
-        threading.Thread(target=self._next_frame).start()
-
-    def next_frame(self, skip: int | None = 0):
-        self.current_frame = (self.current_frame + skip + 1) % len(self.frames)
-        print(self.current_frame, self.frames[self.current_frame])
-        self.loadFromData(self.frames[self.current_frame])
-
-    def resize_all(self, x: int, y: int):
-        for frame in self.frames:
-            pass
 
 
 class MainWindow(QMainWindow):
@@ -152,34 +101,18 @@ class MainWindow(QMainWindow):
         @label.hook_click
         def _(e: SimpleMouseEvent) -> bool:
             print(e)
-            if e.button == SimpleMouseEvent.BTN_LEFT and e.action == SimpleMouseEvent.ACT_DOWN:
-                _switch()
-                return True
             if e.button == SimpleMouseEvent.BTN_RIGHT:
                 QApplication.quit()
                 return False
 
-        image = QImage("img.png")
-        label.setToolTip("Leftclick to switch, Rightclick to quit")
+        pixmap = QPixmap("img.png")
+        label.setPixmap(pixmap)
+        label.setToolTip("Right click to quit")
         self.size = (100, 100)
-        self.size = (image.width(), image.height())
+        self.size = (pixmap.width(), pixmap.height())
         self.setGeometry(QtCore.QRect(50, funcs.get_taskbar_position() - self.size[1], self.size[0], self.size[1]))
 
-        apixmap = AnimatedPixmap(["a1.png", "a2.png", "a3.png", "a2.png"])
-
-        next_pixmap = apixmap
-
-        def _switch():
-            apixmap.next_frame()
-            return
-            nonlocal next_pixmap
-            _ = next_pixmap
-            next_pixmap = label.pixmap()
-            label.setPixmap(_)
-
-        widget = QImageWidget
-
-        self.setCentralWidget(image)
+        self.setCentralWidget(label)
         self.show()
 
 
