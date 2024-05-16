@@ -13,7 +13,8 @@ except ModuleNotFoundError as e:
         from tkinter import messagebox
 
         messagebox.showerror("Python module missing",
-                             f"To run this program, you need to install the following python module: {e.name}\n\nYou can install it with the following command:\n\n\tpip install {e.name}")
+                             f"To run this program, you need to install the following python module: {e.name}\n"
+                             f"\nYou can install it with the following command:\n\n\tpip install {e.name}", )
         raise SystemExit(1)
     except ModuleNotFoundError:
         print(e)
@@ -63,7 +64,8 @@ class SimpleMouseEvent:
         self.relative_pos = r_pos
 
     def __str__(self) -> str:
-        return f"MouseEvent(button={self.str_button}, action={self.str_action}, absolute_pos={self.str_absolute_pos}, relative_pos={self.str_relative_pos})"
+        return (f"MouseEvent(button={self.str_button}, action={self.str_action}, absolute_pos={self.str_absolute_pos}"
+                f", relative_pos={self.str_relative_pos})")
 
     @property
     def str_button(self) -> str:
